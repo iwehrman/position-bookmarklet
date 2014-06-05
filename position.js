@@ -10,26 +10,37 @@
 
     function addClientRectsOverlay(elt) {
         // Absolutely position a div over each client rect so that its border width
-        // is the same as the rectangle's width.
+        // is the same as the rectangle"s width.
         // Note: the overlays will be out of place if the user resizes or zooms.
         var rects = elt.getClientRects(),
             rect;
         for (var i = 0; i != rects.length; i++) {
             rect = rects[i];
-            var tableRectDiv = document.createElement('div');
-            tableRectDiv.style.position = 'absolute';
-            tableRectDiv.style.border = '1px solid red';
-            tableRectDiv.style.margin = tableRectDiv.style.padding = '0';
-            tableRectDiv.style.top = (rect.top + scrollTop) + 'px';
-            tableRectDiv.style.left = (rect.left + scrollLeft) + 'px';
+            var tableRectDiv = document.createElement("div");
+            tableRectDiv.style.position = "absolute";
+            tableRectDiv.style.border = "1px solid red";
+            tableRectDiv.style.margin = tableRectDiv.style.padding = "0";
+            tableRectDiv.style.top = (rect.top + scrollTop) + "px";
+            tableRectDiv.style.left = (rect.left + scrollLeft) + "px";
             // we want rect.width to be the border width, so content width is 2px less.
-            tableRectDiv.style.width = (rect.width - 2) + 'px';
-            tableRectDiv.style.height = (rect.height - 2) + 'px';
+            tableRectDiv.style.width = (rect.width - 2) + "px";
+            tableRectDiv.style.height = (rect.height - 2) + "px";
             document.body.appendChild(tableRectDiv);
         }
     }
 
-    var printPositions = function (elt, list) {
+    var rectToString = function (rect) {
+        return [
+            "width: " + rect.width,
+            "height: " + rect.height,
+            "top: " + rect.top,
+            "right: " + rect.right,
+            "bottom: " + rect.bottom,
+            "left: " + rect.left
+        ].join(", ");
+    };
+
+    var traverseElements = function (elt, list) {
         var tag = elt.tagName,
             id = (elt.id ? "#" + elt.id : ""),
             classList = elt.className.split(" ").filter(function (c) { return !!c; }),
@@ -46,53 +57,52 @@
             itemChildrenContainer = document.createElement("li"),
             itemChildrenList = document.createElement("ol");
 
-        itemName.innerText = "Name: " + name;
+        itemName.insertAdjacentHTML("beforeend", "Name: " + name);
         container.appendChild(itemName);
         item.appendChild(container);
         list.appendChild(item);
 
         var rects = elt.getClientRects(),
+            rect,
             rectElt;
 
-        if (rects.length > 0) {
+        if (showRects && rects.length > 0) {
             for (var j = 0; j < rects.length; j++) {
+                rect = rects[j];
                 rectElt = document.createElement("li");
-                rectElt.innerText = JSON.stringify(rects[j]);
+                rectElt.insertAdjacentHTML("beforeend", rectToString(rect));
                 itemRectsList.appendChild(rectElt);
             }
 
-            itemRectsCount.innerText = "Rects: " + rects.length;
+            itemRectsCount.insertAdjacentHTML("beforeend", "Rects: " + rects.length);
             itemRectsContainer.appendChild(itemRectsList);
 
             container.appendChild(itemRectsCount);
             container.appendChild(itemRectsContainer);
 
-            if (showRects) {
-                setTimeout(function () {
-                    addClientRectsOverlay(elt);
-                }, 0);
-            }
+            setTimeout(function () {
+                // wait until the next tick of the event loop to avoid 
+                // traversing the overlay elements
+                addClientRectsOverlay(elt);
+            }, 0);
         }
 
-        var children = elt.children || [],
-            child;
-
+        var children = elt.children || [];
         if (children.length > 0) {
-            for (var i = 0; i < children.length; i++) {
-                child = children[i];
-                printPositions(child, itemChildrenList);
-            }
-
-            itemChildrenCount.innerText = "Children: " + elt.children.length;
+            itemChildrenCount.insertAdjacentHTML("beforeend", "Children: " + elt.children.length);
             itemChildrenContainer.appendChild(itemChildrenList);            
 
             container.appendChild(itemChildrenCount);
             container.appendChild(itemChildrenContainer);
+
+            for (var i = 0; i < children.length; i++) {
+                traverseElements(children[i], itemChildrenList);
+            }
         }
     };
 
     var listElt = document.createElement("ol");
-    printPositions(document.children[0], listElt);
+    traverseElements(document.children[0], listElt);
 
     var tableRectDiv = document.createElement("div");
     tableRectDiv.style.position = "absolute";
@@ -103,8 +113,8 @@
     tableRectDiv.style.border = "1px solid grey";
     tableRectDiv.style.background = "rgba(255,255,255,0.9)";
     tableRectDiv.style.overflow = "scroll";
-    tableRectDiv.style["font-size"] = "12px";
-    tableRectDiv.style["z-index"] = 1000;
+    tableRectDiv.style.fontSize = "12px";
+    tableRectDiv.style.zIndex = 1000;
     tableRectDiv.appendChild(listElt);
     document.body.appendChild(tableRectDiv);
 }());
